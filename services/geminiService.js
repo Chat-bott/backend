@@ -21,7 +21,6 @@ const getModel = () => {
   }
 };
 
-// ✅ Deterministic parsing so we don't depend on Gemini behavior
 const parseFillFromUser = (text) => {
   const t = String(text || "").trim();
   if (!t) return [];
@@ -52,7 +51,6 @@ const parseFillFromUser = (text) => {
     if (value) out.push({ field: hits[i].field, value });
   }
 
-  // Dedup (last wins)
   const final = {};
   for (const x of out) final[x.field] = x.value;
 
@@ -140,7 +138,6 @@ Respond naturally, and include ACTION tags when needed.`;
 
     const actions = [];
 
-    // Extract actions from Gemini output
     let m;
 
     const sectionRe = /\[ACTION:scroll_to_section:([a-zA-Z0-9_-]+)\]/g;
@@ -173,12 +170,9 @@ Respond naturally, and include ACTION tags when needed.`;
       } catch {}
     }
 
-    // ✅ Forced actions from user text (so Gemini can't block you)
     const forcedFills = parseFillFromUser(userMessage).filter((x) =>
       allowedFields.has(x.field)
     );
-
-    // merge (avoid duplicates)
     for (const f of forcedFills) {
       const exists = actions.some(
         (a) => a.type === "fill_input" && a.data?.field === f.field
@@ -187,11 +181,7 @@ Respond naturally, and include ACTION tags when needed.`;
         actions.push({ type: "fill_input", data: { field: f.field, value: f.value } });
       }
     }
-
-    // Clean visible text
     let cleanedText = rawText.replace(/\[ACTION:[^\]]+\]/g, "").trim();
-
-    // If user asked to fill something, don't return Gemini's useless denial text
     if (forcedFills.length > 0) {
       const summary = forcedFills.map((x) => x.field).join(", ");
       cleanedText = `Done. Filled: ${summary}.`;
